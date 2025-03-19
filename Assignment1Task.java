@@ -5,7 +5,7 @@ class Assignment1 {
     // Simulation Initialisation
     private static int NUM_MACHINES = 50; // Number of machines in the system that issue print requests
     private static int NUM_PRINTERS = 5; // Number of printers in the system that print requests
-    private static int SIMULATION_TIME = 30;
+    private static int SIMULATION_TIME = 5;
     private static int MAX_PRINTER_SLEEP = 3;
     private static int MAX_MACHINE_SLEEP = 5;
     private static boolean sim_active = true;
@@ -20,10 +20,29 @@ class Assignment1 {
         ArrayList<Thread> pThreads = new ArrayList<Thread>();
 
         // Create Machine and Printer threads
-        // Write code here
+        for(int i = 1; i <= NUM_MACHINES; i++){
+            MachineThread machine = new MachineThread(i);
+            mThreads.add(machine);
+        }
+        //System.out.println("Created Machines");
+
+        for(int i = 1; i <= NUM_PRINTERS; i++){
+            PrinterThread printer = new PrinterThread(i);
+            pThreads.add(printer);
+        }
+        //System.out.println("Created Printers");
 
         // start all the threads
-        // Write code here
+        for(Thread machine : mThreads){
+            machine.start();
+        }
+        //System.out.println("Started Machine Threads");
+
+        for(Thread printer : pThreads){
+            printer.start();
+        }
+        //System.out.println("Started Printer Threads");
+
 
         // let the simulation run for some time
         sleep(SIMULATION_TIME);
@@ -31,16 +50,27 @@ class Assignment1 {
         // finish simulation
         sim_active = false;
 
+        //System.out.println("Finish the Simulation");
+
+
         // Wait until all printer threads finish by using the join function
-        // Write code here
+        try {
+            for(Thread printer : pThreads){
+                printer.join();
+            }
+        } catch (InterruptedException e) {
+            System.out.println(e);
+        }
+
+        //System.out.println("Programs Done");
 
     }
 
     // Printer class
-    public class printerThread extends Thread {
+    public class PrinterThread extends Thread {
         private int printerID;
 
-        public printerThread(int id) {
+        public PrinterThread(int id) {
             printerID = id;
         }
 
@@ -49,7 +79,7 @@ class Assignment1 {
                 // Simulate printer taking some time to print the document
                 printerSleep();
                 // Grab the request at the head of the queue and print it
-                // Write code here
+                printDox(printerID);
             }
         }
 
@@ -72,10 +102,10 @@ class Assignment1 {
     }
 
     // Machine class
-    public class machineThread extends Thread {
+    public class MachineThread extends Thread {
         private int machineID;
 
-        public machineThread(int id) {
+        public MachineThread(int id) {
             machineID = id;
         }
 
@@ -84,7 +114,7 @@ class Assignment1 {
                 // machine sleeps for a random amount of time
                 machineSleep();
                 // machine wakes up and sends a print request
-                // Write code here
+                printRequest(machineID);
             }
         }
 
