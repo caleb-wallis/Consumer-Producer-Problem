@@ -24,24 +24,24 @@ class Assignment1 {
             MachineThread machine = new MachineThread(i);
             mThreads.add(machine);
         }
-        System.out.println("Created Machines");
+        //System.out.println("Created Machines");
 
         for(int i = 1; i <= NUM_PRINTERS; i++){
             PrinterThread printer = new PrinterThread(i);
             pThreads.add(printer);
         }
-        System.out.println("Created Printers");
+        //System.out.println("Created Printers");
 
         // start all the threads
         for(Thread machine : mThreads){
             machine.start();
         }
-        System.out.println("Started Machine Threads");
+        //System.out.println("Started Machine Threads");
 
         for(Thread printer : pThreads){
             printer.start();
         }
-        System.out.println("Started Printer Threads");
+        //System.out.println("Started Printer Threads");
 
 
         // let the simulation run for some time
@@ -50,7 +50,7 @@ class Assignment1 {
         // finish simulation
         sim_active = false;
 
-        System.out.println("Finish the Simulation");
+        //System.out.println("Finish the Simulation");
 
 
         // Wait until all printer threads finish by using the join function
@@ -62,7 +62,7 @@ class Assignment1 {
             System.out.println(e);
         }
 
-        System.out.println("Programs Done");
+        //System.out.println("Programs Done");
 
     }
 
@@ -79,7 +79,7 @@ class Assignment1 {
                 // Simulate printer taking some time to print the document
                 printerSleep();
                 // Grab the request at the head of the queue and print it
-                // Write code here
+                printDox(printerID);
             }
         }
 
@@ -114,7 +114,7 @@ class Assignment1 {
                 // machine sleeps for a random amount of time
                 machineSleep();
                 // machine wakes up and sends a print request
-                // Write code here
+                printRequest(machineID);
             }
         }
 
