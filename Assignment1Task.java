@@ -7,7 +7,7 @@ class Assignment1 {
     // Simulation Initialisation
     private static int NUM_MACHINES = 50; // Number of machines in the system that issue print requests
     private static int NUM_PRINTERS = 5; // Number of printers in the system that print requests
-    private static int SIMULATION_TIME = 5;
+    private static int SIMULATION_TIME = 30;
     private static int MAX_PRINTER_SLEEP = 3;
     private static int MAX_MACHINE_SLEEP = 5;
     private static boolean sim_active = true;
@@ -60,7 +60,7 @@ class Assignment1 {
         // finish simulation
         sim_active = false;
 
-        System.out.println("\nFINSIH THE SIMULATION\n");
+        //System.out.println("\nFINSIH THE SIMULATION\n");
 
         // Release enough permits to wake up all printer threads
         // This ensures that any printer waiting on documentsAvailable.acquire() will be unblocked and print the remaining messages in the queue
@@ -86,9 +86,9 @@ class Assignment1 {
         } catch (InterruptedException e) {
             System.out.println("Error:" + e);
         }
-        finally{
-            System.out.println("\nPROGRAMS DONE\n");
-        }
+        //finally{
+            //System.out.println("\nPROGRAMS DONE\n");
+        //}
     }
 
     // Printer class
