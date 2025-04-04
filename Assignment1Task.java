@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
 
 class Assignment1 {
 
@@ -12,7 +13,9 @@ class Assignment1 {
     private static boolean sim_active = true;
 
     // Semaphore that will only allow size of NUM_PRINTERS messages to enter the queue
-    private static Semaphore printerQueue = new Semaphore(NUM_PRINTERS);
+    private static Semaphore messageQueue = new Semaphore(NUM_PRINTERS);
+    // Mutex lock that will only allow 1 device into the queue at once
+    private static ReentrantLock deviceLock = new ReentrantLock();
 
 
     // Create an empty list of print requests
@@ -64,7 +67,7 @@ class Assignment1 {
                 printer.join();
             }
         } catch (InterruptedException e) {
-            System.out.println(e);
+            System.out.println("Error:" + e);
         }
         finally{
             System.out.println("Programs Done");
@@ -90,7 +93,7 @@ class Assignment1 {
 
         public void printerSleep() {
             int sleepSeconds = 1 + (int) (Math.random() * MAX_PRINTER_SLEEP);
-            // sleep(sleepSeconds*1000);
+            // sleep(sleepSeconds*1000);    
             try {
                 sleep(sleepSeconds * 1000);
             } catch (InterruptedException ex) {
@@ -99,16 +102,22 @@ class Assignment1 {
         }
 
         public void printDox(int printerID) {
+            // Lock deviceLock if no other thread owns it / is interacting with the queue
+            deviceLock.lock();
             try{
                 System.out.println("Printer ID:" + printerID + " : now available");
                 // print from the queue
                 list.queuePrint(list, printerID);
 
                 // Allow a machine to insert a new message
-                printerQueue.release(); 
+                messageQueue.release(); 
             }
             catch(Exception e){
                 System.out.println(e);
+            }
+            finally {
+                // Unlock deviceLock to let other threads access the queue
+                deviceLock.unlock();
             }
         }
 
@@ -145,7 +154,10 @@ class Assignment1 {
         public void printRequest(int id) {
             try{
                 // Wait for space in queue
-                printerQueue.acquire();
+                messageQueue.acquire();
+
+                // Lock deviceLock if no other thread owns it / is interacting with the queue
+                deviceLock.lock();
 
                 System.out.println("Machine " + id + " Sent a print request");
                 // Build a print document
@@ -155,6 +167,10 @@ class Assignment1 {
             }
             catch(Exception e){
                 System.out.println(e);
+            }
+            finally{
+                // Unlock deviceLock to let other threads access the queue
+                deviceLock.unlock();
             }
         }
     }
