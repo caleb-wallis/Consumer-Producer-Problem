@@ -12,8 +12,10 @@ class Assignment1 {
     private static int MAX_MACHINE_SLEEP = 5;
     private static boolean sim_active = true;
 
-    // Semaphore that will only allow size of NUM_PRINTERS messages to enter the queue
-    private static Semaphore messageQueue = new Semaphore(NUM_PRINTERS);
+    // Semaphore that will limit the queue size to NUM_PRINTERS
+    private static Semaphore queueSpaceAvailable = new Semaphore(NUM_PRINTERS);
+    // Semaphore to track messages available to print
+    private static Semaphore documentsAvailable = new Semaphore(0);
     // Mutex lock that will only allow 1 device into the queue at once
     private static ReentrantLock deviceLock = new ReentrantLock();
 
@@ -58,11 +60,26 @@ class Assignment1 {
         // finish simulation
         sim_active = false;
 
-        System.out.println("Finish the Simulation");
+        System.out.println("\nFINSIH THE SIMULATION\n");
 
+        // Release enough permits to wake up all printer threads
+        // This ensures that any printer waiting on documentsAvailable.acquire() will be unblocked and print the remaining messages in the queue
+        for(int i = 0; i < NUM_PRINTERS; i++) {
+            documentsAvailable.release();
+        }
 
-        // Wait until all printer threads finish by using the join function
+        // Release enough permits to wake up all machine threads
+        // This ensures that any machine waiting on queueSpaceAvailable.acquire() will be unblocked and end
+         for(int i = 0; i < NUM_MACHINES; i++) {
+            queueSpaceAvailable.release();
+        }
+
+        // Wait until all printer and machine threads finish by using the join function
         try {
+            for(Thread machine : mThreads){
+                machine.join();
+            }
+
             for(Thread printer : pThreads){
                 printer.join();
             }
@@ -70,7 +87,7 @@ class Assignment1 {
             System.out.println("Error:" + e);
         }
         finally{
-            System.out.println("Programs Done");
+            System.out.println("\nPROGRAMS DONE\n");
         }
     }
 
@@ -86,6 +103,7 @@ class Assignment1 {
             while (sim_active) {
                 // Simulate printer taking some time to print the document
                 printerSleep();
+
                 // Grab the request at the head of the queue and print it
                 printDox(printerID);
             }
@@ -102,22 +120,31 @@ class Assignment1 {
         }
 
         public void printDox(int printerID) {
-            // Lock deviceLock if no other thread owns it / is interacting with the queue
-            deviceLock.lock();
             try{
+                // Wait until there's a document to print
+                documentsAvailable.acquire();
+
+                // Lock deviceLock if no other thread owns it / is interacting with the queue
+                deviceLock.lock();
+        
                 System.out.println("Printer ID:" + printerID + " : now available");
+
                 // print from the queue
                 list.queuePrint(list, printerID);
 
                 // Allow a machine to insert a new message
-                messageQueue.release(); 
+                queueSpaceAvailable.release(); 
             }
             catch(Exception e){
                 System.out.println(e);
+                // Release the documents available as we couldn't print from the queue
+                documentsAvailable.release();
             }
             finally {
-                // Unlock deviceLock to let other threads access the queue
-                deviceLock.unlock();
+                // Unlock deviceLock to let other threads access the queue if we actually own the lock
+                if (deviceLock.isHeldByCurrentThread()) {
+                    deviceLock.unlock();
+                }
             }
         }
 
@@ -133,10 +160,16 @@ class Assignment1 {
 
         public void run() {
             while (sim_active) {
-                // machine sleeps for a random amount of time
-                machineSleep();
-                // machine wakes up and sends a print request
-                printRequest(machineID);
+                try {
+                    // machine sleeps for a random amount of time
+                    machineSleep();
+
+                    // machine wakes up and sends a print request
+                    printRequest(machineID);
+                } catch (Exception e) {
+                    // Just exit silently when interrupted
+                    break;
+                }
             }
         }
 
@@ -147,30 +180,43 @@ class Assignment1 {
             try {
                 sleep(sleepSeconds * 1000);
             } catch (InterruptedException ex) {
-                System.out.println("Sleep Interrupted");
+              //  System.out.println("Sleep Interrupted");
             }
         }
 
         public void printRequest(int id) {
-            try{
+             try{  
                 // Wait for space in queue
-                messageQueue.acquire();
+                queueSpaceAvailable.acquire();
+
+                // Check if simulation is still active
+                if (!sim_active) {return;}
 
                 // Lock deviceLock if no other thread owns it / is interacting with the queue
                 deviceLock.lock();
-
+             
                 System.out.println("Machine " + id + " Sent a print request");
+
                 // Build a print document
                 printDoc doc = new printDoc("My name is machine " + id, id);
+
                 // Insert it in print queue
                 list = list.queueInsert(list, doc);
+
+                // Signal that a message is available to go into the queue
+                documentsAvailable.release();
             }
             catch(Exception e){
                 System.out.println(e);
+
+                // Release the queue space as we couldn't add a message to the queue
+                queueSpaceAvailable.release();
             }
             finally{
-                // Unlock deviceLock to let other threads access the queue
-                deviceLock.unlock();
+                // Unlock deviceLock to let other threads access the queue if we actually own the lock
+                if (deviceLock.isHeldByCurrentThread()) {
+                    deviceLock.unlock();
+                }
             }
         }
     }
